@@ -79,12 +79,15 @@ def main():
         glh.cleanup_after_rebase_merge(repo)
 
         # Update issue
-        labels = [decision]
+        issue = transition.issue
+        labels = issue.get_labels()
+        labels = [l.name for l in labels if l.name != "in-review"]
+        labels.append(decision)
         if command == "yes":
             labels.append("check-references")
-        transition.issue.edit(labels=labels)
+        issue.edit(labels=labels)
         if command == "no":
-            transition.issue.edit(state="closed")
+            issue.edit(state="closed")
 
 
 if __name__ == "__main__":
