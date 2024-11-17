@@ -41,10 +41,10 @@ def write_bibtex(fp, bibtex):
         file.write(bibtex)
 
 
-def main():
+def main(raw_args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("doi", type=str)
-    args = parser.parse_args()
+    args = parser.parse_args(raw_args)
 
     repo = Repo(".")
     if repo.is_dirty():
@@ -76,11 +76,14 @@ def main():
     )
     # Commit, open pull-request and auto-merge
     title = f"in-review: Add {publication['ID']} #{issue.number}"
+        repo.heads.develop.checkout()
     repo.index.add([IN_REVIEW_FP])
     repo.index.commit(title)
     repo.remote("origin").push()
     pr = gh_repo.create_pull(base="master", head="develop", title=title)
     pr.merge(merge_method="rebase")
+
+        glh.cleanup_after_rebase_merge(repo)
 
     repo.heads.master.checkout()
     repo.remote("origin").pull()
