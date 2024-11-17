@@ -36,7 +36,7 @@ def main():
             if comment.user.login != "aewag":
                 print(f"Unknown user {comment.user} commented in {issue.title}")
                 continue
-            command = comment._rawData["body"]
+            command = comment._rawData["body"].lower()
             if command not in ["yes", "no"]:
                 print(f"Unhandled comment {command} in {issue.title}")
                 continue
