@@ -53,9 +53,9 @@ def main(raw_args=None):
         exit()
 
     for fp in [IN_REVIEW_FP, NOT_IN_SCOPE_FP, IN_SCOPE_FP, LITERATURE_FP]:
-        if args.doi in [entry["doi"] for entry in read_bibtex(fp).entries]:
+        if args.doi.lower() in [e["doi"].lower() for e in read_bibtex(fp).entries]:
             print("Publication is already contained in one of the bib files")
-            exit()
+            return
 
     bibtex = get_bibtex_with_doi(args.doi)
     publication = bibtexparser.loads(bibtex)
@@ -70,7 +70,7 @@ def main(raw_args=None):
     auth = Auth.Token(TOKEN)
     g = Github(auth=auth)
     gh_repo = g.get_repo("aewag/physical-attack-collection")
-    body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```"
+    body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
     issue = gh_repo.create_issue(
         title=publication["ID"], body=body, labels=["in-review"]
     )
