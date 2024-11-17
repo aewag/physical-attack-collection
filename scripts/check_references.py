@@ -31,11 +31,10 @@ def main():
         publication = publication[0]
 
         references = bh.get_references_with_doi(publication["doi"])
-        # TODO handle no_doi_references
         no_doi_references = [r for r in references if "DOI" not in r]
+        print(f"Following refernces have no DOI: {no_doi_references}")
         references = [r for r in references if "DOI" in r]
         for reference in references:
-            print(f"Found reference {reference['ID']}")
             review_append_with_doi.main([reference["DOI"]])
         labels = issue.get_labels()
         labels = [l for l in labels if l != "check-references"]
