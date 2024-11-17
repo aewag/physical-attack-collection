@@ -7,6 +7,7 @@ from github import GithubIntegration
 from itertools import chain
 import json
 import os
+import string
 import sys
 import urllib.request
 
@@ -32,6 +33,22 @@ def get_bibtex_with_doi(doi):
         return bibtex
     except urllib.error.HTTPError:
         return None
+
+
+def add_publication_to_bibtex(bibtex, publication):
+    if publication["ID"] not in [e["ID"] for e in bibtex.entries]:
+        bibtex.entries.append(publication)
+        return bibtex
+    ids = [e["ID"] for e in bibtex.entries if publication["ID"] in e["ID"]]
+    for suffix in string.ascii_lowercase:
+        if f"{publication['ID']}{suffix}" in ids:
+            continue
+        break
+    else:
+        assert False, "I could not find any untaken suffix"
+    publication["ID"] = f"{publication['ID']}{suffix}"
+    bibtex.entries.append(publication)
+    return bibtex
 
 
 def read_bibtex(fp):
