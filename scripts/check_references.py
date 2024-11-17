@@ -1,11 +1,14 @@
+import calendar
 from git import Repo
 from github import Auth
 from github import Github
 from github import GithubIntegration
 from github import NamedUser
+from github import RateLimit
 import os
 import json
 import sys
+import time
 
 import bibtex_handler as bh
 import git_localrepo_handler as glh
@@ -16,6 +19,14 @@ from TOKEN import TOKEN
 def main():
     auth = Auth.Token(TOKEN)
     g = Github(auth=auth)
+    rate_limit = g.get_rate_limit().core
+    if rate_limit.remaining == 0:
+        reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
+        sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
+        if sleep_time > 0:
+            print(f"GH rate-limit exceeded for {sleep_time}s")
+            time.sleep(sleep_time)
+            print("Woken up, let's continue")
     gh_repo = g.get_repo("aewag/physical-attack-collection")
 
     repo = Repo(".")
