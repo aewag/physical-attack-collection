@@ -6,6 +6,7 @@ from github import Github
 from github import GithubIntegration
 from itertools import chain
 import json
+import os
 import sys
 import urllib.request
 
@@ -23,11 +24,14 @@ API_CROSSREF_BIBTEX = "/transform/application/x-bibtex"
 
 
 def get_bibtex_with_doi(doi):
-    with urllib.request.urlopen(
-        f"{API_CROSSREF}{doi}{API_CROSSREF_BIBTEX}"
-    ) as response:
-        bibtex = response.read().decode()
-    return bibtex
+    try:
+        with urllib.request.urlopen(
+            f"{API_CROSSREF}{doi}{API_CROSSREF_BIBTEX}"
+        ) as response:
+            bibtex = response.read().decode()
+        return bibtex
+    except urllib.error.HTTPError:
+        return None
 
 
 def read_bibtex(fp):
@@ -53,11 +57,14 @@ def main(raw_args=None):
         exit()
 
     for fp in [IN_REVIEW_FP, NOT_IN_SCOPE_FP, IN_SCOPE_FP, LITERATURE_FP]:
-        if args.doi in [entry["doi"] for entry in read_bibtex(fp).entries]:
+        if args.doi.lower() in [e["doi"].lower() for e in read_bibtex(fp).entries]:
             print("Publication is already contained in one of the bib files")
-            exit()
+            return os.EX_OK
 
     bibtex = get_bibtex_with_doi(args.doi)
+    if bibtex is None:
+        print(f"Didnot find bibtex for DOI = {args.doi}")
+        return os.EX_DATAERR
     publication = bibtexparser.loads(bibtex)
     publication_text = bibtexparser.dumps(publication)
     publication = publication.entries[0]
@@ -70,7 +77,7 @@ def main(raw_args=None):
     auth = Auth.Token(TOKEN)
     g = Github(auth=auth)
     gh_repo = g.get_repo("aewag/physical-attack-collection")
-    body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```"
+    body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
     issue = gh_repo.create_issue(
         title=publication["ID"], body=body, labels=["in-review"]
     )
@@ -84,6 +91,7 @@ def main(raw_args=None):
     pr.merge(merge_method="rebase")
 
     glh.cleanup_after_rebase_merge(repo)
+    return os.EX_OK
 
 
 if __name__ == "__main__":
