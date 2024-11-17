@@ -3,6 +3,7 @@ from github import Auth
 from github import Github
 from github import GithubIntegration
 from github import NamedUser
+import os
 import json
 import sys
 
@@ -40,7 +41,11 @@ def main():
 
         references = [r for r in references if "DOI" in r]
         for reference in references:
-            review_append_with_doi.main([reference["DOI"]])
+            result = review_append_with_doi.main([reference["DOI"]])
+            if result == os.EX_OK:
+                continue
+            text = f"I failed to append the following reference to the review pipeline:\n```{json.dumps(reference, indent=4)}\n```"
+            issue.create_comment(text)
 
         labels = issue.get_labels()
         labels = [l.name for l in labels if l.name != "check-references"]
