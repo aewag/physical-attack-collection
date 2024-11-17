@@ -50,7 +50,6 @@ def main(raw_args=None):
     if repo.is_dirty():
         print("Repository is dirty. Cannot continue.")
         exit()
-    repo.heads.develop.checkout()
 
     for fp in [IN_REVIEW_FP, NOT_IN_SCOPE_FP, IN_SCOPE_FP, LITERATURE_FP]:
         if args.doi in [entry["doi"] for entry in read_bibtex(fp).entries]:
@@ -76,21 +75,14 @@ def main(raw_args=None):
     )
     # Commit, open pull-request and auto-merge
     title = f"in-review: Add {publication['ID']} #{issue.number}"
-        repo.heads.develop.checkout()
+    repo.heads.develop.checkout()
     repo.index.add([IN_REVIEW_FP])
     repo.index.commit(title)
     repo.remote("origin").push()
     pr = gh_repo.create_pull(base="master", head="develop", title=title)
     pr.merge(merge_method="rebase")
 
-        glh.cleanup_after_rebase_merge(repo)
-
-    repo.heads.master.checkout()
-    repo.remote("origin").pull()
-    repo.heads.develop.checkout()
-    repo.git.rebase("origin/master")
-    repo.remote("origin").push(force=True)
-    repo.heads.master.checkout()
+    glh.cleanup_after_rebase_merge(repo)
 
 
 if __name__ == "__main__":
