@@ -36,12 +36,19 @@ def get_bibtex_with_doi(doi):
 
 
 def add_publication_to_bibtex(bibtex, publication):
-    if publication["ID"] not in [e["ID"] for e in bibtex.entries]:
-        bibtex.entries.append(publication)
-        return bibtex
-    ids = [e["ID"] for e in bibtex.entries if publication["ID"] in e["ID"]]
-    for suffix in string.ascii_lowercase:
-        if f"{publication['ID']}{suffix}" in ids:
+    merged_ids = [
+        e["ID"]
+        for e in chain(
+            read_bibtex(IN_REVIEW_FP).entries,
+            read_bibtex(NOT_IN_SCOPE_FP).entries,
+            read_bibtex(IN_SCOPE_FP).entries,
+            read_bibtex(LITERATURE_FP).entries,
+        )
+    ]
+    suffixes = [""]
+    suffixes.extend(list(string.ascii_lowercase))
+    for suffix in suffixes:
+        if f"{publication['ID']}{suffix}" in merged_ids:
             continue
         break
     else:
