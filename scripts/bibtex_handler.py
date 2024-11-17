@@ -19,6 +19,16 @@ def get_bibtex_with_doi(doi):
     return bibtex
 
 
+def get_references_with_doi(doi):
+    with urllib.request.urlopen(f"{API_CROSSREF}{doi}") as response:
+        dct = json.load(response)
+    msg = dct["message"]
+    if "reference" not in msg:
+        return []
+    refs = msg["reference"]
+    return refs
+
+
 def read_bibtex(fp):
     with open(fp, "r") as file:
         bibtex = file.read()
