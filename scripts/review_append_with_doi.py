@@ -1,5 +1,6 @@
 import argparse
 import bibtexparser
+import calendar
 from git import Repo
 from github import Auth
 from github import Github
@@ -9,6 +10,7 @@ import json
 import os
 import string
 import sys
+import time
 import urllib.request
 
 import git_localrepo_handler as glh
@@ -100,6 +102,14 @@ def main(raw_args=None):
     # Github open new issue to track progress
     auth = Auth.Token(TOKEN)
     g = Github(auth=auth)
+    rate_limit = g.get_rate_limit().core
+    if rate_limit.remaining == 0:
+        reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
+        sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
+        if sleep_time > 0:
+            print(f"GH rate-limit exceeded for {sleep_time}s")
+            time.sleep(sleep_time)
+            print("Woken up, let's continue")
     gh_repo = g.get_repo("aewag/physical-attack-collection")
     body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
     issue = gh_repo.create_issue(
