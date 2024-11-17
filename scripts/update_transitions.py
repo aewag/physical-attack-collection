@@ -6,6 +6,7 @@ from github import NamedUser
 import sys
 
 import bibtex_handler as bh
+import git_localrepo_handler as glh
 from TOKEN import TOKEN
 
 
@@ -21,14 +22,13 @@ def main():
     g = Github(auth=auth)
     gh_repo = g.get_repo("aewag/physical-attack-collection")
 
-    issues = gh_repo.get_issues(labels=["in-review"])
-    transitions = list()
-
     repo = Repo(".")
     if repo.is_dirty():
         print("Repository is dirty. Cannot continue.")
         exit()
-    repo.heads.develop.checkout()
+
+    issues = gh_repo.get_issues(labels=["in-review"])
+    transitions = list()
 
     for issue in issues:
         print(issue.title)
@@ -69,18 +69,15 @@ def main():
         # Commit, open pull-request and auto-merge
         decision = "in-scope" if command == "yes" else "not-in-scope"
         title = f"Move {publication['ID']} to {decision} #{transition.issue.number}"
+        repo.heads.develop.checkout()
         repo.index.add([bh.IN_REVIEW_FP, bh.IN_SCOPE_FP, bh.NOT_IN_SCOPE_FP])
         repo.index.commit(title)
         repo.remote("origin").push()
         pr = gh_repo.create_pull(base="master", head="develop", title=title)
         pr.merge(merge_method="rebase")
-        # Cleanup local repository
-        repo.heads.master.checkout()
-        repo.remote("origin").pull()
-        repo.heads.develop.checkout()
-        repo.git.rebase("origin/master")
-        repo.remote("origin").push(force=True)
-        repo.heads.master.checkout()
+
+        glh.cleanup_after_rebase_merge(repo)
+
         # Update issue
         labels = [decision]
         if command == "yes":
