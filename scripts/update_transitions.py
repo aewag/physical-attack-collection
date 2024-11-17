@@ -60,14 +60,14 @@ def main():
         # Remove transition from in_review
         in_review.entries = [e for e in in_review.entries if e != publication]
         # Transit publication
-        scope = in_scope if command == "yes" else not_in_scope
+        scope = in_scope if transition.command == "yes" else not_in_scope
         scope.entries.append(publication)
         # Write bibtex files
         bh.write_bibtex(bh.IN_REVIEW_FP, in_review)
         bh.write_bibtex(bh.IN_SCOPE_FP, in_scope)
         bh.write_bibtex(bh.NOT_IN_SCOPE_FP, not_in_scope)
         # Commit, open pull-request and auto-merge
-        decision = "in-scope" if command == "yes" else "not-in-scope"
+        decision = "in-scope" if transition.command == "yes" else "not-in-scope"
         title = f"Move {publication['ID']} to {decision} #{transition.issue.number}"
         repo.heads.develop.checkout()
         repo.index.add([bh.IN_REVIEW_FP, bh.IN_SCOPE_FP, bh.NOT_IN_SCOPE_FP])
@@ -83,10 +83,10 @@ def main():
         labels = issue.get_labels()
         labels = [l.name for l in labels if l.name != "in-review"]
         labels.append(decision)
-        if command == "yes":
+        if transition.command == "yes":
             labels.append("check-references")
         issue.edit(labels=labels)
-        if command == "no":
+        if transition.command == "no":
             issue.edit(state="closed")
 
 
