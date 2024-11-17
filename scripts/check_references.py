@@ -3,6 +3,7 @@ from github import Auth
 from github import Github
 from github import GithubIntegration
 from github import NamedUser
+import json
 import sys
 
 import bibtex_handler as bh
@@ -31,15 +32,17 @@ def main():
         publication = publication[0]
 
         references = bh.get_references_with_doi(publication["doi"])
-        # TODO handle no_doi_references
-        no_doi_references = [r for r in references if "DOI" not in r]
+        no_doi_references = json.dumps([r for r in references if "DOI" not in r], indent=4)
+        text = f"I didnot find DOIs for the following references:\n```\n{no_doi_references}```"
+        issue.create_comment(text)
+
         references = [r for r in references if "DOI" in r]
         for reference in references:
-            print(f"Found reference {reference['ID']}")
             review_append_with_doi.main([reference["DOI"]])
+
         labels = issue.get_labels()
-        labels = [l for l in labels if l != "check-references"]
-        issue.set_labels(labels)
+        labels = [l.name for l in labels if l.name != "check-references"]
+        issue.edit(labels=labels)
 
 if __name__ == "__main__":
     sys.exit(main())
