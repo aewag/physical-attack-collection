@@ -36,7 +36,7 @@ def main():
             if comment.user.login != "aewag":
                 print(f"Unknown user {comment.user} commented in {issue.title}")
                 continue
-            command = comment._rawData["body"]
+            command = comment._rawData["body"].lower()
             if command not in ["yes", "no"]:
                 print(f"Unhandled comment {command} in {issue.title}")
                 continue
@@ -60,7 +60,7 @@ def main():
         # Remove transition from in_review
         in_review.entries = [e for e in in_review.entries if e != publication]
         # Transit publication
-        scope = in_scope if command == "yes" else not_inscope
+        scope = in_scope if command == "yes" else not_in_scope
         scope.entries.append(publication)
         # Write bibtex files
         bh.write_bibtex(bh.IN_REVIEW_FP, in_review)
