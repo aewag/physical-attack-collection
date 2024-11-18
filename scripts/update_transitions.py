@@ -37,12 +37,15 @@ def main():
         print("Repository is dirty. Cannot continue.")
         exit()
 
-    issues = gh_repo.get_issues(labels=["in-review"])
+    issues = gh_repo.get_issues(labels=["in-review"], sort="comments-desc")
     transitions = list()
 
     for issue in issues:
-        print(issue.title)
-        for comment in issue.get_comments():
+        comments = issue.get_comments()
+        if comments.totalCount == 0:
+            print("No more updates assumed, because of issues sorting")
+            break
+        for comment in comments:
             if comment.user.login != "aewag":
                 print(f"Unknown user {comment.user} commented in {issue.title}")
                 continue
@@ -50,6 +53,7 @@ def main():
             if command not in ["yes", "no"]:
                 print(f"Unhandled comment {command} in {issue.title}")
                 continue
+            print(f"Updates received for {issue.title}")
             break
         else:
             print(f"No updates received for {issue.title}")
