@@ -10,6 +10,9 @@ LITERATURE_FP = "bib/literature.bib"
 API_CROSSREF = "https://api.crossref.org/works/"
 API_CROSSREF_BIBTEX = "/transform/application/x-bibtex"
 
+API_SEMANTICSCHOLAR = "https://api.semanticscholar.org/v1/paper/"
+API_SEMANTICSCHOLAR_SUFFIX = "?include_unknown_references=true"
+
 
 def get_bibtex_with_doi(doi):
     with urllib.request.urlopen(
@@ -20,13 +23,20 @@ def get_bibtex_with_doi(doi):
 
 
 def get_references_with_doi(doi):
+    references = list()
+    # crossref
     with urllib.request.urlopen(f"{API_CROSSREF}{doi}") as response:
         dct = json.load(response)
     msg = dct["message"]
-    if "reference" not in msg:
-        return []
-    refs = msg["reference"]
-    return refs
+    references.extend(msg.get("reference", []))
+    # semanticscholar
+    with urllib.request.urlopen(
+        f"{API_SEMANTICSCHOLAR}{doi}{API_SEMANTICSCHOLAR_SUFFIX}"
+    ) as response:
+        dct = json.load(response)
+    references.extend(dct.get("references", []))
+    references.extend(dct.get("citations", []))
+    return references
 
 
 def read_bibtex(fp):
