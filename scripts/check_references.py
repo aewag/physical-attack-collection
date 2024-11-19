@@ -50,11 +50,13 @@ def main():
         text = f"I didnot find DOIs for the following references:\n```\n{no_doi_references}\n```"
 
         references = [r for r in references if "doi" in r or "DOI" in r]
+        print(f"Found {len(references)} references and citations for {issue.title})")
         for reference in references:
             doi = reference["DOI"] if "DOI" in reference else reference["doi"]
-            result = review_append_with_doi.main([doi])
-            if result == os.EX_OK:
-                continue
+            if doi is not None:
+                result = review_append_with_doi.main([doi])
+                if result == os.EX_OK:
+                    continue
             text = f"{text}\n\nI failed to append the following reference to the review pipeline:\n```\n{json.dumps(reference, indent=4)}\n```"
 
         issue.create_comment(text)
