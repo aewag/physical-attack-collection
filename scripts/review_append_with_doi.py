@@ -92,6 +92,9 @@ def main(raw_args=None):
         print(f"Didnot find bibtex for DOI = {args.doi}")
         return os.EX_DATAERR
     publication = bibtexparser.loads(bibtex)
+    if publication.entries == []:
+        print(f"Bibtex parsing failed for DOI = {args.doi}")
+        return os.EX_DATAERR
     publication_text = bibtexparser.dumps(publication)
     publication = publication.entries[0]
 
