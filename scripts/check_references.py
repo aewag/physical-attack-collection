@@ -12,7 +12,7 @@ import time
 
 import bibtex_handler as bh
 import git_localrepo_handler as glh
-import review_append_with_doi
+import review_append_with_doi as rawd
 from TOKEN import TOKEN
 
 
@@ -48,15 +48,12 @@ def main():
 
         references = [r for r in references if "doi" in r or "DOI" in r]
         print(f"Found {len(references)} references and citations for {issue.title})")
-        for reference in references:
-            doi = reference["DOI"] if "DOI" in reference else reference["doi"]
-            if doi is not None:
-                result = review_append_with_doi.main([doi])
-                if result == os.EX_OK:
-                    continue
-            unknown_references.append(reference)
-
-        bh.update_unknown(unknown_references)
+        dois = [r["DOI"] if "DOI" in r else r["doi"] for r in references]
+        dois = [d for d in dois if d is not None] # TODO handle unknowns or throw away?
+        print(f"{len(references) - len(dois)} references and citations have no DOIs for {issue.title})")
+        while dois:
+            dois_buffer, dois = dois[:rawd.MAX_REFS], dois[rawd.MAX_REFS:]
+            rawd.main(dois_buffer)
 
         labels = issue.get_labels()
         labels = [l.name for l in labels if l.name != "check-references"]
