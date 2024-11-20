@@ -104,7 +104,7 @@ def main(raw_args=None):
     for idx, doi in enumerate(args.doi):
         args.doi[idx] = None if doi.lower() in known_dois else doi
     unfiltered_dois = len(args.doi)
-    args.doi = [doi for doi in args.doi if doi is not None]
+    args.doi = [set([doi.lower() for doi in args.doi if doi is not None])]
     print(f"{len(args.doi)} of {unfiltered_dois} DOIs are yet unknown.")
     if not args.doi:
         return os.EX_OK
