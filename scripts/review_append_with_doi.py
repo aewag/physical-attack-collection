@@ -25,6 +25,8 @@ LITERATURE_FP = "bib/literature.bib"
 API_CROSSREF = "https://api.crossref.org/works/"
 API_CROSSREF_BIBTEX = "/transform/application/x-bibtex"
 
+MAX_REFS = 50
+
 
 def get_bibtex_with_doi(doi):
     try:
@@ -74,55 +76,62 @@ def write_bibtex(fp, bibtex):
 
 def main(raw_args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("doi", type=str)
+    parser.add_argument("doi", type=str, nargs="+")
     args = parser.parse_args(raw_args)
+    assert len(args.doi) <= MAX_REFS, f"At most {MAX_REFS} references at once."
 
     repo = Repo(".")
-    if repo.is_dirty():
-        print("Repository is dirty. Cannot continue.")
-        exit()
+    # if repo.is_dirty():
+    #     print("Repository is dirty. Cannot continue.")
+    #     exit()
 
+    known_dois = []
     for fp in [IN_REVIEW_FP, NOT_IN_SCOPE_FP, IN_SCOPE_FP, LITERATURE_FP]:
-        if args.doi.lower() in [e["doi"].lower() for e in read_bibtex(fp).entries]:
-            print("Publication is already contained in one of the bib files")
-            return os.EX_OK
+        known_dois.extend([e["doi"].lower() for e in read_bibtex(fp).entries])
+    for idx, doi in enumerate(args.doi):
+        args.doi[idx] = None if doi.lower() in known_dois else doi
+    unfiltered_dois = len(args.doi)
+    args.doi = [doi for doi in args.doi if doi is not None]
+    print(f"{unfiltered_dois - len(args.doi)} of {unfiltered_dois} DOIs are already known.")
 
-    bibtex = get_bibtex_with_doi(args.doi)
-    if bibtex is None:
-        print(f"Didnot find bibtex for DOI = {args.doi}")
-        return os.EX_DATAERR
-    publication = bibtexparser.loads(bibtex)
-    if publication.entries == []:
-        print(f"Bibtex parsing failed for DOI = {args.doi}")
-        return os.EX_DATAERR
-    publication_text = bibtexparser.dumps(publication)
-    publication = publication.entries[0]
+    for doi in args.doi:
+        bibtex = get_bibtex_with_doi(doi)
+        if bibtex is None:
+            print(f"Didnot find bibtex for DOI = {doi}")
+            continue
+        publication = bibtexparser.loads(bibtex)
+        if publication.entries == []:
+            print(f"Bibtex parsing failed for DOI = {doi}")
+            continue
+        publication_text = bibtexparser.dumps(publication)
+        publication = publication.entries[0]
 
-    review = read_bibtex(IN_REVIEW_FP)
-    review = add_publication_to_bibtex(review, publication)
-    write_bibtex(IN_REVIEW_FP, review)
+        review = read_bibtex(IN_REVIEW_FP)
+        review = add_publication_to_bibtex(review, publication)
+        write_bibtex(IN_REVIEW_FP, review)
 
-    # Github open new issue to track progress
-    auth = Auth.Token(TOKEN)
-    g = Github(auth=auth)
-    rate_limit = g.get_rate_limit().core
-    if rate_limit.remaining == 0:
-        reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
-        sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
-        if sleep_time > 0:
-            print(f"GH rate-limit exceeded for {sleep_time}s")
-            time.sleep(sleep_time)
-            print("Woken up, let's continue")
-    gh_repo = g.get_repo("aewag/physical-attack-collection")
-    body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
-    issue = gh_repo.create_issue(
-        title=publication["ID"], body=body, labels=["in-review"]
-    )
-    # Commit, open pull-request and auto-merge
-    title = f"in-review: Add {publication['ID']} #{issue.number}"
-    repo.heads.develop.checkout()
-    repo.index.add([IN_REVIEW_FP])
-    repo.index.commit(title)
+        # Github open new issue to track progress
+        auth = Auth.Token(TOKEN)
+        g = Github(auth=auth)
+        rate_limit = g.get_rate_limit().core
+        if rate_limit.remaining == 0:
+            reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
+            sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
+            if sleep_time > 0:
+                print(f"GH rate-limit exceeded for {sleep_time}s")
+                time.sleep(sleep_time)
+                print("Woken up, let's continue")
+        gh_repo = g.get_repo("aewag/physical-attack-collection")
+        body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
+        issue = gh_repo.create_issue(
+            title=publication["ID"], body=body, labels=["in-review"]
+        )
+        # Commit, open pull-request and auto-merge
+        title = f"in-review: Add {publication['ID']} #{issue.number}"
+        repo.heads.develop.checkout()
+        repo.index.add([IN_REVIEW_FP])
+        repo.index.commit(title)
+        print(f"Added {publication['ID']} to in-review")
     repo.remote("origin").push()
     pr = gh_repo.create_pull(base="master", head="develop", title=title)
     pr.merge(merge_method="rebase")
