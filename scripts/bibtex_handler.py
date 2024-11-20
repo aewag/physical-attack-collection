@@ -5,6 +5,7 @@ import urllib.request
 IN_REVIEW_FP = "bib/in-review.bib"
 NOT_IN_SCOPE_FP = "bib/not-in-scope.bib"
 IN_SCOPE_FP = "bib/in-scope.bib"
+UNKNOWN_FP = "bib/unknown.json"
 LITERATURE_FP = "bib/literature.bib"
 
 API_CROSSREF = "https://api.crossref.org/works/"
@@ -49,3 +50,12 @@ def write_bibtex(fp, bibtex):
     bibtex = bibtexparser.dumps(bibtex)
     with open(fp, "w") as file:
         file.write(bibtex)
+
+
+def update_unknown(unknown_unhandled):
+    with open(UNKNOWN_FP, "r") as file:
+        unknown = file.read()
+    unknown = json.loads(unknown) if unknown else {"unhandled": [], "handled": []}
+    unknown["unhandled"].extend(unknown_unhandled)
+    with open(UNKNOWN_FP, "w") as file:
+        file.write(json.dumps(unknown, indent=4))

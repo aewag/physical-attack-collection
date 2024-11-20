@@ -44,10 +44,7 @@ def main():
         publication = publication[0]
 
         references = bh.get_references_with_doi(publication["doi"])
-        no_doi_references = json.dumps(
-            [r for r in references if "doi" not in r and "DOI" not in r], indent=4
-        )
-        text = f"I didnot find DOIs for the following references:\n```\n{no_doi_references}\n```"
+        unknown_references = [r for r in references if "doi" not in r and "DOI" not in r]
 
         references = [r for r in references if "doi" in r or "DOI" in r]
         print(f"Found {len(references)} references and citations for {issue.title})")
@@ -57,9 +54,10 @@ def main():
                 result = review_append_with_doi.main([doi])
                 if result == os.EX_OK:
                     continue
-            text = f"{text}\n\nI failed to append the following reference to the review pipeline:\n```\n{json.dumps(reference, indent=4)}\n```"
+            unknown_references.append(reference)
 
-        issue.create_comment(text)
+        bh.update_unknown(unknown_references)
+
         labels = issue.get_labels()
         labels = [l.name for l in labels if l.name != "check-references"]
         issue.edit(labels=labels)
