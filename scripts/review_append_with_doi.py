@@ -81,9 +81,22 @@ def main(raw_args=None):
     assert len(args.doi) <= MAX_REFS, f"At most {MAX_REFS} references at once."
 
     repo = Repo(".")
-    # if repo.is_dirty():
-    #     print("Repository is dirty. Cannot continue.")
-    #     exit()
+    if repo.is_dirty():
+        print("Repository is dirty. Cannot continue.")
+        exit()
+    repo.heads.develop.checkout()
+
+    auth = Auth.Token(TOKEN)
+    g = Github(auth=auth)
+    rate_limit = g.get_rate_limit().core
+    if rate_limit.remaining == 0:
+        reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
+        sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
+        if sleep_time > 0:
+            print(f"GH rate-limit exceeded for {sleep_time}s")
+            time.sleep(sleep_time)
+            print("Woken up, let's continue")
+    gh_repo = g.get_repo("aewag/physical-attack-collection")
 
     known_dois = []
     for fp in [IN_REVIEW_FP, NOT_IN_SCOPE_FP, IN_SCOPE_FP, LITERATURE_FP]:
@@ -92,7 +105,9 @@ def main(raw_args=None):
         args.doi[idx] = None if doi.lower() in known_dois else doi
     unfiltered_dois = len(args.doi)
     args.doi = [doi for doi in args.doi if doi is not None]
-    print(f"{unfiltered_dois - len(args.doi)} of {unfiltered_dois} DOIs are already known.")
+    print(f"{len(args.doi)} of {unfiltered_dois} DOIs are yet unknown.")
+    if not args.doi:
+        return os.EX_OK
 
     for doi in args.doi:
         bibtex = get_bibtex_with_doi(doi)
@@ -111,29 +126,19 @@ def main(raw_args=None):
         write_bibtex(IN_REVIEW_FP, review)
 
         # Github open new issue to track progress
-        auth = Auth.Token(TOKEN)
-        g = Github(auth=auth)
-        rate_limit = g.get_rate_limit().core
-        if rate_limit.remaining == 0:
-            reset_timestamp = calendar.timegm(rate_limit.reset.timetuple())
-            sleep_time = reset_timestamp - calendar.timegm(time.gmtime()) + 5
-            if sleep_time > 0:
-                print(f"GH rate-limit exceeded for {sleep_time}s")
-                time.sleep(sleep_time)
-                print("Woken up, let's continue")
-        gh_repo = g.get_repo("aewag/physical-attack-collection")
         body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
         issue = gh_repo.create_issue(
             title=publication["ID"], body=body, labels=["in-review"]
         )
         # Commit, open pull-request and auto-merge
         title = f"in-review: Add {publication['ID']} #{issue.number}"
-        repo.heads.develop.checkout()
         repo.index.add([IN_REVIEW_FP])
         repo.index.commit(title)
         print(f"Added {publication['ID']} to in-review")
     repo.remote("origin").push()
-    pr = gh_repo.create_pull(base="master", head="develop", title=title)
+    pr = gh_repo.create_pull(
+        base="master", head="develop", title="Adding publications to review"
+    )
     pr.merge(merge_method="rebase")
 
     glh.cleanup_after_rebase_merge(repo)
