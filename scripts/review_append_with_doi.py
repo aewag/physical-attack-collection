@@ -109,6 +109,7 @@ def main(raw_args=None):
     if not args.doi:
         return os.EX_OK
 
+    any_commits_added = False
     for doi in args.doi:
         bibtex = get_bibtex_with_doi(doi)
         if bibtex is None:
@@ -135,6 +136,9 @@ def main(raw_args=None):
         repo.index.add([IN_REVIEW_FP])
         repo.index.commit(title)
         print(f"Added {publication['ID']} to in-review")
+        any_commits_added = True
+    if any_commits_added is False:
+        return os.EX_OK
     repo.remote("origin").push()
     pr = gh_repo.create_pull(
         base="master", head="develop", title="Adding publications to review"
