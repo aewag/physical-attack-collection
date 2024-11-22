@@ -8,6 +8,7 @@ from github import GithubIntegration
 from itertools import chain
 import json
 import os
+from semanticscholar import SemanticScholar
 import string
 import sys
 import time
@@ -80,6 +81,8 @@ def main(raw_args=None):
     args = parser.parse_args(raw_args)
     assert len(args.doi) <= MAX_REFS, f"At most {MAX_REFS} references at once."
 
+    s2 = SemanticScholar()
+
     repo = Repo(".")
     if repo.is_dirty():
         print("Repository is dirty. Cannot continue.")
@@ -109,29 +112,39 @@ def main(raw_args=None):
     if not args.doi:
         return os.EX_OK
 
+    papers = s2.get_papers(args.doi)
+
     any_commits_added = False
-    for doi in args.doi:
+    for paper in papers:
+        doi = paper["externalIds"]["DOI"]
         bibtex = get_bibtex_with_doi(doi)
         if bibtex is None:
-            print(f"Didnot find bibtex for DOI = {doi}")
+            print(f"Bibtex parsing failed for DOI = {doi}")
             continue
         publication = bibtexparser.loads(bibtex)
         if publication.entries == []:
-            print(f"Bibtex parsing failed for DOI = {doi}")
+            print(f"Bibtex parsing failed for {paper}")
             continue
         publication_text = bibtexparser.dumps(publication)
         publication = publication.entries[0]
-
+        # Github open new issue to track progress
+        body = (
+            f"WDYT? Is this publication in scope?\n"
+            f"```\n{publication_text}```\n"
+            f"URL: {paper['url']}\n"
+            f"Google Scholar: https://scholar.google.de/scholar?hl=en&q={doi}"
+        )
+        labels = ["in-review"]
+        if paper["isOpenAccess"]:
+            body += f"\nOpen-access pdf: {paper['openAccessPdf']}"
+            labels.append("open-access")
+        if "tldr" in dict(paper):
+            body += f"\nS2 TLDR:\n{paper['tldr']['text']}"
+        issue = gh_repo.create_issue(title=publication["ID"], body=body, labels=labels)
+        # Write, commit, open pull-request and auto-merge
         review = read_bibtex(IN_REVIEW_FP)
         review = add_publication_to_bibtex(review, publication)
         write_bibtex(IN_REVIEW_FP, review)
-
-        # Github open new issue to track progress
-        body = f"WDYT? Is this publication in scope?\n```\n{publication_text}```\nURL: {publication['url']}\nGoogle Scholar: https://scholar.google.de/scholar?hl=en&q={publication['doi']}"
-        issue = gh_repo.create_issue(
-            title=publication["ID"], body=body, labels=["in-review"]
-        )
-        # Commit, open pull-request and auto-merge
         title = f"in-review: Add {publication['ID']} #{issue.number}"
         repo.index.add([IN_REVIEW_FP])
         repo.index.commit(title)
