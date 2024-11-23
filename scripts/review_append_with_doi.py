@@ -144,7 +144,12 @@ def main(raw_args=None):
             labels.append("open-access")
         if "tldr" in dict(paper):
             body += f"\nS2 TLDR:\n{paper['tldr']['text']}"
-        issue = gh_repo.create_issue(title=publication["ID"], body=body, labels=labels)
+        try:
+            issue = gh_repo.create_issue(title=publication["ID"], body=body, labels=labels)
+        except requests.exceptions.RetryError:
+            print("Sleeping for 45 mins because of RetryError while creating an issue")
+            time.sleep(45 * 60)
+            issue = gh_repo.create_issue(title=publication["ID"], body=body, labels=labels)
         # Write, commit, open pull-request and auto-merge
         review = read_bibtex(IN_REVIEW_FP)
         review = add_publication_to_bibtex(review, publication)
@@ -157,9 +162,16 @@ def main(raw_args=None):
     if any_commits_added is False:
         return os.EX_OK
     repo.remote("origin").push()
-    pr = gh_repo.create_pull(
-        base="master", head="develop", title="Adding publications to review"
-    )
+    try:
+        pr = gh_repo.create_pull(
+            base="master", head="develop", title="Adding publications to review"
+        )
+    except requests.exceptions.RetryError:
+        print("Sleeping for 45 mins because of RetryError while creating a PR")
+        time.sleep(45 * 60)
+        pr = gh_repo.create_pull(
+            base="master", head="develop", title="Adding publications to review"
+        )
     pr.merge(merge_method="rebase")
 
     glh.cleanup_after_rebase_merge(repo)
