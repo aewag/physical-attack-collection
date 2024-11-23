@@ -26,8 +26,6 @@ LITERATURE_FP = "bib/literature.bib"
 API_CROSSREF = "https://api.crossref.org/works/"
 API_CROSSREF_BIBTEX = "/transform/application/x-bibtex"
 
-MAX_REFS = 50
-
 
 def get_bibtex_with_doi(doi):
     try:
@@ -79,7 +77,6 @@ def main(raw_args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("doi", type=str, nargs="+")
     args = parser.parse_args(raw_args)
-    assert len(args.doi) <= MAX_REFS, f"At most {MAX_REFS} references at once."
 
     s2 = SemanticScholar()
 

@@ -53,9 +53,7 @@ def main():
         dois = [r["DOI"] if "DOI" in r else r["doi"] for r in references]
         dois = [d for d in dois if d is not None]  # TODO handle unknowns or throw away?
         print(f"{len(references) - len(dois)} references and citations have no DOIs")
-        while dois:
-            dois_buffer, dois = dois[: rawd.MAX_REFS], dois[rawd.MAX_REFS :]
-            rawd.main(dois_buffer)
+        rawd.main(dois)
 
         labels = issue.get_labels()
         labels = [l.name for l in labels if l.name != "check-references"]
