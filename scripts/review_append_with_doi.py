@@ -8,7 +8,7 @@ from github import GithubIntegration
 from itertools import chain
 import json
 import os
-from semanticscholar import SemanticScholar
+from semanticscholar import SemanticScholar, SemanticScholarException
 import string
 import sys
 import time
@@ -112,7 +112,11 @@ def main(raw_args=None):
     if not args.doi:
         return os.EX_OK
 
-    papers = s2.get_papers(args.doi)
+    try:
+        papers = s2.get_papers(args.doi)
+    except SemanticScholarException.BadQueryParametersException as error:
+        print(f"No paper found for {args.doi}")
+        return os.EX_OK
 
     any_commits_added = False
     for paper in papers:
