@@ -8,6 +8,7 @@ from github import GithubIntegration
 from itertools import chain
 import json
 import os
+import requests
 from semanticscholar import SemanticScholar, SemanticScholarException
 import string
 import sys
