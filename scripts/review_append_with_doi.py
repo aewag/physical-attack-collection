@@ -111,7 +111,10 @@ def main(raw_args=None):
         return os.EX_OK
 
     try:
-        papers = s2.get_papers(args.doi)
+        papers = list()
+        while args.doi:
+            dois, args.doi = args.doi[:500], args.doi[500:]
+            papers.extend(s2.get_papers(dois))
     except SemanticScholarException.BadQueryParametersException as error:
         print(f"No paper found for {args.doi}")
         return os.EX_OK
