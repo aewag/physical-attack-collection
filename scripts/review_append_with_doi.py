@@ -132,6 +132,8 @@ def main(raw_args=None):
             continue
         publication_text = bibtexparser.dumps(publication)
         publication = publication.entries[0]
+        review = read_bibtex(IN_REVIEW_FP)
+        review = add_publication_to_bibtex(review, publication)
         # Github open new issue to track progress
         body = (
             f"WDYT? Is this publication in scope?\n"
@@ -152,8 +154,6 @@ def main(raw_args=None):
             time.sleep(45 * 60)
             issue = gh_repo.create_issue(title=publication["ID"], body=body, labels=labels)
         # Write, commit, open pull-request and auto-merge
-        review = read_bibtex(IN_REVIEW_FP)
-        review = add_publication_to_bibtex(review, publication)
         write_bibtex(IN_REVIEW_FP, review)
         title = f"in-review: Add {publication['ID']} #{issue.number}"
         repo.index.add([IN_REVIEW_FP])
