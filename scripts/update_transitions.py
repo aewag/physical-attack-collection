@@ -80,17 +80,13 @@ def main():
         bh.write_bibtex(bh.IN_REVIEW_FP, in_review)
         bh.write_bibtex(bh.IN_SCOPE_FP, in_scope)
         bh.write_bibtex(bh.NOT_IN_SCOPE_FP, not_in_scope)
-        # Commit, open pull-request and auto-merge
+        # Commit and push
         decision = "in-scope" if transition.command == "yes" else "not-in-scope"
         title = f"Move {publication['ID']} to {decision} #{transition.issue.number}"
         repo.heads.develop.checkout()
         repo.index.add([bh.IN_REVIEW_FP, bh.IN_SCOPE_FP, bh.NOT_IN_SCOPE_FP])
         repo.index.commit(title)
         repo.remote("origin").push()
-        pr = gh_repo.create_pull(base="master", head="develop", title=title)
-        pr.merge(merge_method="rebase")
-
-        glh.cleanup_after_rebase_merge(repo)
 
         # Update issue
         issue = transition.issue
@@ -102,6 +98,11 @@ def main():
         issue.edit(labels=labels)
         if transition.command == "no":
             issue.edit(state="closed")
+
+    pr = gh_repo.create_pull(base="master", head="develop", title=title)
+    pr.merge(merge_method="rebase")
+
+    glh.cleanup_after_rebase_merge(repo)
 
 
 if __name__ == "__main__":
