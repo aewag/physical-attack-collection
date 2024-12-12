@@ -31,12 +31,15 @@ def get_references_with_doi(doi):
     msg = dct["message"]
     references.extend(msg.get("reference", []))
     # semanticscholar
-    with urllib.request.urlopen(
-        f"{API_SEMANTICSCHOLAR}{doi}{API_SEMANTICSCHOLAR_SUFFIX}"
-    ) as response:
-        dct = json.load(response)
-    references.extend(dct.get("references", []))
-    references.extend(dct.get("citations", []))
+    try:
+        with urllib.request.urlopen(
+            f"{API_SEMANTICSCHOLAR}{doi}{API_SEMANTICSCHOLAR_SUFFIX}"
+        ) as response:
+            dct = json.load(response)
+        references.extend(dct.get("references", []))
+        references.extend(dct.get("citations", []))
+    except urllib.error.HTTPError as err:
+        print(f"s2 {doi} - {err}")
     return references
 
 
