@@ -6,6 +6,7 @@ from github import Auth
 from github import Github
 from github import GithubIntegration
 from itertools import chain
+from itertools import product
 import json
 import os
 import requests
@@ -50,8 +51,11 @@ def add_publication_to_bibtex(bibtex, publication):
         )
     ]
     suffixes = [""]
-    suffixes.extend(list(string.ascii_lowercase))
+    suffixes.extend(list(product(string.ascii_lowercase, repeat=1)))
+    suffixes.extend(list(product(string.ascii_lowercase, repeat=2)))
+    suffixes.extend(list(product(string.ascii_lowercase, repeat=3)))
     for suffix in suffixes:
+        suffix = "".join(suffix)
         if f"{publication['ID']}{suffix}" in merged_ids:
             continue
         break
